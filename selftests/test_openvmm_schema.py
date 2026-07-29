@@ -13,6 +13,10 @@ from lisa.sut_orchestrator.openvmm.schema import (
     OpenVmmGuestNodeSchema,
     OpenVmmNetworkSchema,
 )
+from lisa.tools.openvmm import (
+    OPENVMM_DISK_DEVICE_VIRTIO_BLK,
+    OPENVMM_NETWORK_DEVICE_VIRTIO,
+)
 
 
 class OpenVmmSchemaTestCase(TestCase):
@@ -50,6 +54,20 @@ class OpenVmmSchemaTestCase(TestCase):
         )
 
         self.assertEqual(["--foo", "bar baz"], guest.extra_args)
+
+    def test_guest_schema_accepts_virtio_devices(self) -> None:
+        guest_schema = cast(Any, OpenVmmGuestNodeSchema).schema()
+        guest = guest_schema.load(
+            {
+                "uefi": {"firmware_path": "/firmware"},
+                "disk_img": "/disk.raw",
+                "disk_device": OPENVMM_DISK_DEVICE_VIRTIO_BLK,
+                "network": {"device": OPENVMM_NETWORK_DEVICE_VIRTIO},
+            }
+        )
+
+        self.assertEqual(OPENVMM_DISK_DEVICE_VIRTIO_BLK, guest.disk_device)
+        self.assertEqual(OPENVMM_NETWORK_DEVICE_VIRTIO, guest.network.device)
 
     def test_host_proxy_connection_mode_disables_forwarded_port(self) -> None:
         network_schema = cast(Any, OpenVmmNetworkSchema).schema()

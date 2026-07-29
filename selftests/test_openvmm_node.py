@@ -26,6 +26,10 @@ from lisa.sut_orchestrator.openvmm.serial_console import (
     SerialConsole as OpenVmmSerialConsole,
 )
 from lisa.tools import Cat, Ip, Kill, Mkdir
+from lisa.tools.openvmm import (
+    OPENVMM_DISK_DEVICE_SCSI,
+    OPENVMM_NETWORK_DEVICE_SYNTHETIC,
+)
 from lisa.util import LisaException
 
 
@@ -131,7 +135,12 @@ class OpenVmmNodeTestCase(TestCase):
         node = SimpleNamespace(
             runbook=SimpleNamespace(
                 openvmm_binary="/usr/local/bin/openvmm",
-                network=SimpleNamespace(mode="user", consomme_cidr=""),
+                disk_device=OPENVMM_DISK_DEVICE_SCSI,
+                network=SimpleNamespace(
+                    mode="user",
+                    device=OPENVMM_NETWORK_DEVICE_SYNTHETIC,
+                    consomme_cidr="",
+                ),
                 serial=SimpleNamespace(mode="file"),
                 extra_args=[],
             ),
@@ -158,6 +167,9 @@ class OpenVmmNodeTestCase(TestCase):
             cwd=PurePosixPath("/var/tmp/openvmm-host-g0"),
             sudo=False,
         )
+        launch_config = openvmm.launch_vm.call_args.args[0]
+        self.assertEqual(OPENVMM_DISK_DEVICE_SCSI, launch_config.disk_device)
+        self.assertEqual(OPENVMM_NETWORK_DEVICE_SYNTHETIC, launch_config.network_device)
 
     def test_create_effective_network_derives_unique_tap_settings(self) -> None:
         controller, _, _, _ = self._create_controller()

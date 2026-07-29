@@ -698,6 +698,7 @@ class OpenVmmController:
         launch_config = OpenVmmLaunchConfig(
             uefi_firmware_path=node_context.uefi_firmware_path,
             disk_img_path=node_context.disk_img_path,
+            disk_device=runbook.disk_device,
             dvd_disk_paths=(
                 [node_context.cloud_init_file_path]
                 if node_context.cloud_init_file_path
@@ -706,6 +707,7 @@ class OpenVmmController:
             processors=_countspace_to_int(node.capability.core_count),
             memory_mb=_countspace_to_int(node.capability.memory_mb),
             network_mode=network.mode,
+            network_device=network.device,
             tap_name=getattr(network, "tap_name", ""),
             network_cidr=network.consomme_cidr,
             serial_mode=runbook.serial.mode,
