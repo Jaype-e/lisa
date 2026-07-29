@@ -16,6 +16,12 @@ from lisa.sut_orchestrator.util.schema import (
     DevicePassthroughSchema,
     HostDevicePoolSchema,
 )
+from lisa.tools.openvmm import (
+    OPENVMM_DISK_DEVICE_SCSI,
+    OPENVMM_DISK_DEVICE_VIRTIO_BLK,
+    OPENVMM_NETWORK_DEVICE_SYNTHETIC,
+    OPENVMM_NETWORK_DEVICE_VIRTIO,
+)
 from lisa.util import LisaException
 
 from .. import OPENVMM
@@ -99,6 +105,7 @@ class OpenVmmSerialSchema:
 @dataclass
 class OpenVmmNetworkSchema:
     mode: str = OPENVMM_NETWORK_MODE_USER
+    device: str = OPENVMM_NETWORK_DEVICE_SYNTHETIC
     connection_mode: str = OPENVMM_CONNECTION_MODE_FORWARDED_PORT
     address_mode: str = OPENVMM_ADDRESS_MODE_DISCOVER
     tap_name: str = ""
@@ -160,7 +167,19 @@ class OpenVmmNetworkSchema:
         if self.bridge_name:
             self._validate_interface_name("bridge_name", self.bridge_name)
 
+    def _validate_device(self) -> None:
+        if self.device not in [
+            OPENVMM_NETWORK_DEVICE_SYNTHETIC,
+            OPENVMM_NETWORK_DEVICE_VIRTIO,
+        ]:
+            raise LisaException(
+                f"network device '{self.device}' is not supported for OpenVMM "
+                f"guests. Supported values: {OPENVMM_NETWORK_DEVICE_SYNTHETIC}, "
+                f"{OPENVMM_NETWORK_DEVICE_VIRTIO}"
+            )
+
     def __post_init__(self) -> None:
+        self._validate_device()
         if self.connection_mode not in [
             OPENVMM_CONNECTION_MODE_FORWARDED_PORT,
             OPENVMM_CONNECTION_MODE_HOST_PROXY,
@@ -258,6 +277,7 @@ class OpenVmmGuestNodeSchema(schema.GuestNode):
     uefi: Optional[OpenVmmUefiSchema] = None
     disk_img: str = ""
     disk_img_is_remote_path: bool = False
+    disk_device: str = OPENVMM_DISK_DEVICE_SCSI
     min_raw_disk_size_gb: int = field(
         default=OPENVMM_DEFAULT_MIN_RAW_DISK_SIZE_GB,
         metadata=schema.field_metadata(
@@ -290,6 +310,15 @@ class OpenVmmGuestNodeSchema(schema.GuestNode):
             )
         if not self.disk_img:
             raise LisaException("disk_img is required for UEFI OpenVMM guests")
+        if self.disk_device not in [
+            OPENVMM_DISK_DEVICE_SCSI,
+            OPENVMM_DISK_DEVICE_VIRTIO_BLK,
+        ]:
+            raise LisaException(
+                f"disk device '{self.disk_device}' is not supported for OpenVMM "
+                f"guests. Supported values: {OPENVMM_DISK_DEVICE_SCSI}, "
+                f"{OPENVMM_DISK_DEVICE_VIRTIO_BLK}"
+            )
         if (
             self.cloud_init
             and not self.private_key_file
