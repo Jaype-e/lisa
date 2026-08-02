@@ -5,6 +5,7 @@ from unittest import TestCase
 
 from lisa.tools.openvmm import (
     OPENVMM_DISK_DEVICE_VIRTIO_BLK,
+    OPENVMM_IOMMU_INTEL,
     OPENVMM_NETWORK_DEVICE_VIRTIO,
     OpenVmm,
     OpenVmmLaunchConfig,
@@ -41,6 +42,7 @@ class OpenVmmToolTestCase(TestCase):
                 uefi_firmware_path="/firmware/MSVM.fd",
                 disk_img_path="/disks/guest.raw",
                 disk_device=OPENVMM_DISK_DEVICE_VIRTIO_BLK,
+                iommu=OPENVMM_IOMMU_INTEL,
                 dvd_disk_paths=["/disks/cloud-init.iso"],
                 network_mode="tap",
                 network_device=OPENVMM_NETWORK_DEVICE_VIRTIO,
@@ -50,6 +52,7 @@ class OpenVmmToolTestCase(TestCase):
         )
 
         self.assertIn("--pcie-root-complex lisa_virtio_rc0", command)
+        self.assertIn("--intel-vtd lisa_virtio_rc0", command)
         self.assertIn("--pcie-root-port lisa_virtio_rc0:lisa_virtio_disk", command)
         self.assertIn("--pcie-root-port lisa_virtio_rc0:lisa_virtio_net", command)
         self.assertIn(

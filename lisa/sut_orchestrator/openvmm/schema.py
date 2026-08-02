@@ -19,6 +19,9 @@ from lisa.sut_orchestrator.util.schema import (
 from lisa.tools.openvmm import (
     OPENVMM_DISK_DEVICE_SCSI,
     OPENVMM_DISK_DEVICE_VIRTIO_BLK,
+    OPENVMM_IOMMU_AMD,
+    OPENVMM_IOMMU_INTEL,
+    OPENVMM_IOMMU_NONE,
     OPENVMM_NETWORK_DEVICE_SYNTHETIC,
     OPENVMM_NETWORK_DEVICE_VIRTIO,
 )
@@ -106,6 +109,7 @@ class OpenVmmSerialSchema:
 class OpenVmmNetworkSchema:
     mode: str = OPENVMM_NETWORK_MODE_USER
     device: str = OPENVMM_NETWORK_DEVICE_SYNTHETIC
+    shared_subnet: bool = False
     connection_mode: str = OPENVMM_CONNECTION_MODE_FORWARDED_PORT
     address_mode: str = OPENVMM_ADDRESS_MODE_DISCOVER
     tap_name: str = ""
@@ -178,8 +182,22 @@ class OpenVmmNetworkSchema:
                 f"{OPENVMM_NETWORK_DEVICE_VIRTIO}"
             )
 
+    def _validate_shared_subnet(self) -> None:
+        if not self.shared_subnet:
+            return
+        if self.mode != OPENVMM_NETWORK_MODE_TAP or not self.bridge_name:
+            raise LisaException(
+                "shared_subnet requires tap network mode and bridge_name"
+            )
+        if self.address_mode != OPENVMM_ADDRESS_MODE_STATIC and self.guest_address:
+            raise LisaException(
+                "guest_address cannot be fixed when shared_subnet uses DHCP. "
+                "Remove guest_address or use address_mode 'static'."
+            )
+
     def __post_init__(self) -> None:
         self._validate_device()
+        self._validate_shared_subnet()
         if self.connection_mode not in [
             OPENVMM_CONNECTION_MODE_FORWARDED_PORT,
             OPENVMM_CONNECTION_MODE_HOST_PROXY,
@@ -278,6 +296,7 @@ class OpenVmmGuestNodeSchema(schema.GuestNode):
     disk_img: str = ""
     disk_img_is_remote_path: bool = False
     disk_device: str = OPENVMM_DISK_DEVICE_SCSI
+    iommu: str = OPENVMM_IOMMU_NONE
     min_raw_disk_size_gb: int = field(
         default=OPENVMM_DEFAULT_MIN_RAW_DISK_SIZE_GB,
         metadata=schema.field_metadata(
@@ -318,6 +337,16 @@ class OpenVmmGuestNodeSchema(schema.GuestNode):
                 f"disk device '{self.disk_device}' is not supported for OpenVMM "
                 f"guests. Supported values: {OPENVMM_DISK_DEVICE_SCSI}, "
                 f"{OPENVMM_DISK_DEVICE_VIRTIO_BLK}"
+            )
+        if self.iommu not in [
+            OPENVMM_IOMMU_NONE,
+            OPENVMM_IOMMU_INTEL,
+            OPENVMM_IOMMU_AMD,
+        ]:
+            raise LisaException(
+                f"IOMMU '{self.iommu}' is not supported for OpenVMM guests. "
+                f"Supported values: {OPENVMM_IOMMU_NONE}, "
+                f"{OPENVMM_IOMMU_INTEL}, {OPENVMM_IOMMU_AMD}"
             )
         if (
             self.cloud_init

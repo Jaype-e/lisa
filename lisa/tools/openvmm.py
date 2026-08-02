@@ -16,6 +16,9 @@ OPENVMM_NETWORK_BACKEND_CONSOMME = "consomme"
 OPENVMM_DEFAULT_SCSI_CONTROLLER = "lisa_scsi0"
 OPENVMM_DISK_DEVICE_SCSI = "scsi"
 OPENVMM_DISK_DEVICE_VIRTIO_BLK = "virtio-blk"
+OPENVMM_IOMMU_AMD = "amd-iommu"
+OPENVMM_IOMMU_INTEL = "intel-vtd"
+OPENVMM_IOMMU_NONE = "none"
 OPENVMM_NETWORK_DEVICE_SYNTHETIC = "synthetic"
 OPENVMM_NETWORK_DEVICE_VIRTIO = "virtio"
 OPENVMM_VIRTIO_ROOT_COMPLEX = "lisa_virtio_rc0"
@@ -45,6 +48,7 @@ class OpenVmmLaunchConfig:
     hypervisor: str = "mshv"
     disk_img_path: str = ""
     disk_device: str = OPENVMM_DISK_DEVICE_SCSI
+    iommu: str = OPENVMM_IOMMU_NONE
     dvd_disk_paths: List[str] = field(default_factory=_new_str_list)
     processors: int = 1
     memory_mb: int = 1024
@@ -150,6 +154,12 @@ class OpenVmm(Tool):
             raise LisaException(
                 f"Unsupported OpenVMM network device: {config.network_device}"
             )
+        if config.iommu not in [
+            OPENVMM_IOMMU_NONE,
+            OPENVMM_IOMMU_INTEL,
+            OPENVMM_IOMMU_AMD,
+        ]:
+            raise LisaException(f"Unsupported OpenVMM IOMMU: {config.iommu}")
 
     def _add_pcie_args(self, args: List[str], config: OpenVmmLaunchConfig) -> None:
         use_virtio_disk = bool(config.disk_img_path) and (
@@ -158,6 +168,12 @@ class OpenVmm(Tool):
         use_virtio_network = config.network_device == OPENVMM_NETWORK_DEVICE_VIRTIO
         if use_virtio_disk or use_virtio_network:
             args.extend(["--pcie-root-complex", OPENVMM_VIRTIO_ROOT_COMPLEX])
+            if config.iommu != OPENVMM_IOMMU_NONE:
+                args.extend([f"--{config.iommu}", OPENVMM_VIRTIO_ROOT_COMPLEX])
+        elif config.iommu != OPENVMM_IOMMU_NONE:
+            raise LisaException(
+                "OpenVMM IOMMU requires a virtio disk or network device on PCIe"
+            )
         if use_virtio_disk:
             args.extend(
                 [

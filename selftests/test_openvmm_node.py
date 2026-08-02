@@ -15,6 +15,7 @@ from lisa.features import SerialConsole as SerialConsoleFeature
 from lisa.sut_orchestrator.openvmm.context import NodeContext
 from lisa.sut_orchestrator.openvmm.node import OpenVmmController, OpenVmmGuestNode
 from lisa.sut_orchestrator.openvmm.schema import (
+    OPENVMM_ADDRESS_MODE_STATIC,
     OPENVMM_CONNECTION_MODE_HOST_PROXY,
     OPENVMM_NETWORK_MODE_TAP,
     OpenVmmGuestNodeSchema,
@@ -28,6 +29,7 @@ from lisa.sut_orchestrator.openvmm.serial_console import (
 from lisa.tools import Cat, Ip, Kill, Mkdir
 from lisa.tools.openvmm import (
     OPENVMM_DISK_DEVICE_SCSI,
+    OPENVMM_IOMMU_NONE,
     OPENVMM_NETWORK_DEVICE_SYNTHETIC,
 )
 from lisa.util import LisaException
@@ -136,6 +138,7 @@ class OpenVmmNodeTestCase(TestCase):
             runbook=SimpleNamespace(
                 openvmm_binary="/usr/local/bin/openvmm",
                 disk_device=OPENVMM_DISK_DEVICE_SCSI,
+                iommu=OPENVMM_IOMMU_NONE,
                 network=SimpleNamespace(
                     mode="user",
                     device=OPENVMM_NETWORK_DEVICE_SYNTHETIC,
@@ -200,6 +203,28 @@ class OpenVmmNodeTestCase(TestCase):
         self.assertEqual(60024, third_guest_network.forwarded_port)
         self.assertEqual("tap0", network.tap_name)
         self.assertEqual("10.0.0.1/24", network.tap_host_cidr)
+
+    def test_create_effective_network_reuses_shared_tap_subnet(self) -> None:
+        controller, _, _, _ = self._create_controller()
+        network = OpenVmmNetworkSchema(
+            mode=OPENVMM_NETWORK_MODE_TAP,
+            shared_subnet=True,
+            address_mode=OPENVMM_ADDRESS_MODE_STATIC,
+            tap_name="tap0",
+            bridge_name="ovmbr0",
+            tap_host_cidr="10.0.0.1/24",
+            guest_address="10.0.0.2",
+            forward_ssh_port=True,
+            forwarded_port=60022,
+        )
+
+        third_guest_network = controller.create_effective_network(network, 2)
+
+        self.assertEqual("tap2", third_guest_network.tap_name)
+        self.assertEqual("ovmbr0", third_guest_network.bridge_name)
+        self.assertEqual("10.0.0.1/24", third_guest_network.tap_host_cidr)
+        self.assertEqual("10.0.0.4", third_guest_network.guest_address)
+        self.assertEqual(60024, third_guest_network.forwarded_port)
 
     def test_supported_features_include_serial_console(self) -> None:
         supported_feature_names = [
