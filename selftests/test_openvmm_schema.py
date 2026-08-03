@@ -43,6 +43,17 @@ class OpenVmmSchemaTestCase(TestCase):
                 }
             )
 
+    def test_network_schema_accepts_valid_queue_count(self) -> None:
+        network_schema = cast(Any, OpenVmmNetworkSchema).schema()
+        network = network_schema.load({"queue_count": 1})
+
+        self.assertEqual(1, network.queue_count)
+
+    def test_network_schema_rejects_invalid_queue_count(self) -> None:
+        network_schema = cast(Any, OpenVmmNetworkSchema).schema()
+        with self.assertRaises(ValidationError):
+            network_schema.load({"queue_count": 0})
+
     def test_guest_schema_splits_extra_args_string(self) -> None:
         guest_schema = cast(Any, OpenVmmGuestNodeSchema).schema()
         guest = guest_schema.load(

@@ -35,6 +35,7 @@ class OpenVmmToolTestCase(TestCase):
         self.assertNotIn("--pcie-root-complex", command)
         self.assertNotIn("--virtio-blk", command)
         self.assertNotIn("--virtio-net", command)
+        self.assertNotIn("queues=", command)
 
     def test_build_command_uses_virtio_devices_over_pcie(self) -> None:
         command = self._create_tool().build_command(
@@ -46,6 +47,7 @@ class OpenVmmToolTestCase(TestCase):
                 dvd_disk_paths=["/disks/cloud-init.iso"],
                 network_mode="tap",
                 network_device=OPENVMM_NETWORK_DEVICE_VIRTIO,
+                network_queue_count=1,
                 tap_name="tap0",
                 serial_path="/logs/console.log",
             )
@@ -59,7 +61,9 @@ class OpenVmmToolTestCase(TestCase):
             "--virtio-blk file:/disks/guest.raw,pcie_port=lisa_virtio_disk",
             command,
         )
-        self.assertIn("--virtio-net pcie_port=lisa_virtio_net:tap:tap0", command)
+        self.assertIn(
+            "--virtio-net pcie_port=lisa_virtio_net:queues=1:tap:tap0", command
+        )
         self.assertIn("--vmbus-scsi id=lisa_scsi0", command)
         self.assertIn(
             "--disk file:/disks/cloud-init.iso,on=lisa_scsi0,lun=1,dvd", command

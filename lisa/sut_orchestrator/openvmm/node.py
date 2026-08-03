@@ -749,6 +749,7 @@ class OpenVmmController:
             memory_mb=_countspace_to_int(node.capability.memory_mb),
             network_mode=network.mode,
             network_device=network.device,
+            network_queue_count=network.queue_count,
             tap_name=getattr(network, "tap_name", ""),
             network_cidr=network.consomme_cidr,
             serial_mode=runbook.serial.mode,

@@ -109,6 +109,13 @@ class OpenVmmSerialSchema:
 class OpenVmmNetworkSchema:
     mode: str = OPENVMM_NETWORK_MODE_USER
     device: str = OPENVMM_NETWORK_DEVICE_SYNTHETIC
+    queue_count: Optional[int] = field(
+        default=None,
+        metadata=schema.field_metadata(
+            field_function=schema.fields.Int,
+            validate=schema.validate.Range(min=1, max=65535),
+        ),
+    )
     shared_subnet: bool = False
     connection_mode: str = OPENVMM_CONNECTION_MODE_FORWARDED_PORT
     address_mode: str = OPENVMM_ADDRESS_MODE_DISCOVER

@@ -142,6 +142,7 @@ class OpenVmmNodeTestCase(TestCase):
                 network=SimpleNamespace(
                     mode="user",
                     device=OPENVMM_NETWORK_DEVICE_SYNTHETIC,
+                    queue_count=1,
                     consomme_cidr="",
                 ),
                 serial=SimpleNamespace(mode="file"),
@@ -173,6 +174,7 @@ class OpenVmmNodeTestCase(TestCase):
         launch_config = openvmm.launch_vm.call_args.args[0]
         self.assertEqual(OPENVMM_DISK_DEVICE_SCSI, launch_config.disk_device)
         self.assertEqual(OPENVMM_NETWORK_DEVICE_SYNTHETIC, launch_config.network_device)
+        self.assertEqual(1, launch_config.network_queue_count)
 
     def test_create_effective_network_derives_unique_tap_settings(self) -> None:
         controller, _, _, _ = self._create_controller()

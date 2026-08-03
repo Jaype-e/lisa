@@ -54,6 +54,7 @@ class OpenVmmLaunchConfig:
     memory_mb: int = 1024
     network_mode: str = "user"
     network_device: str = OPENVMM_NETWORK_DEVICE_SYNTHETIC
+    network_queue_count: Optional[int] = None
     tap_name: str = ""
     network_cidr: str = ""
     serial_mode: str = "file"
@@ -154,6 +155,13 @@ class OpenVmm(Tool):
             raise LisaException(
                 f"Unsupported OpenVMM network device: {config.network_device}"
             )
+        if config.network_queue_count is not None and not (
+            1 <= config.network_queue_count <= 65535
+        ):
+            raise LisaException(
+                "OpenVMM network queue count must be between 1 and 65535. "
+                "Set network.queue_count to a supported positive value."
+            )
         if config.iommu not in [
             OPENVMM_IOMMU_NONE,
             OPENVMM_IOMMU_INTEL,
@@ -244,6 +252,8 @@ class OpenVmm(Tool):
         config: OpenVmmLaunchConfig,
         network_backend: str,
     ) -> None:
+        if config.network_queue_count is not None:
+            network_backend = f"queues={config.network_queue_count}:{network_backend}"
         if config.network_device == OPENVMM_NETWORK_DEVICE_SYNTHETIC:
             args.extend(["--net", network_backend])
         else:
