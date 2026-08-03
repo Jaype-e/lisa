@@ -144,7 +144,9 @@ class CloudHypervisorPlatform(BaseLibvirtPlatform):
         assert isinstance(node.capability.core_count, int)
         vcpu_count = node.capability.core_count
         vcpu.text = str(vcpu_count)
-        node_runbook = cast(CloudHypervisorNodeSchema, node.runbook)
+        node_runbook = node.capability.get_extended_runbook(
+            CloudHypervisorNodeSchema, CLOUD_HYPERVISOR
+        )
         network_queue_count = (
             node_runbook.network_queue_count
             if node_runbook.network_queue_count is not None
